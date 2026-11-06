@@ -300,8 +300,13 @@
     .guide-brand { font-size: 9pt; }
     .guide-head { font-size: 15pt; margin: 0 0 2px; }
     .guide-intro { font-size: 8pt; line-height: 1.55; margin-bottom: 6px; }
-    .guide { grid-template-columns: repeat(3, 1fr); gap: 6px; }
-    .guide-item { padding: 6px 10px; border-radius: 12px; break-inside: avoid; }
+    /* 印刷では格子（grid）を使わず横並びにする。iPhoneのSafariでもカードの途中でページが切れないように */
+    .guide { display: block; }
+    .guide-item {
+      display: inline-block; vertical-align: top; width: calc((100% - 12.1px) / 3); margin: 0 6px 6px 0;
+      padding: 6px 10px; border-radius: 12px; break-inside: avoid; page-break-inside: avoid;
+    }
+    .guide-item:nth-child(3n) { margin-right: 0; }
     .guide-top { gap: 8px; margin-bottom: 4px; }
     .guide-num { width: 30px; height: 30px; font-size: 14pt; border-width: 1.5px; }
     .guide-top > div { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; }

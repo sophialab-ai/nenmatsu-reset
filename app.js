@@ -330,6 +330,16 @@
     document.title = original;
   });
 
+  // PDFの保存のしかたは、スマホでは操作がちがうので、案内の文を差し替える
+  var ua = navigator.userAgent || "";
+  var isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  var howto = document.querySelector(".pdf-row p");
+  if (howto && isIOS) {
+    howto.textContent = "iPhone・iPadの場合：印刷の画面が開いたら、上の共有ボタン（四角に↑のマーク）を押し、「“ファイル”に保存」を選ぶとPDFとして保存できます。";
+  } else if (howto && /Android/.test(ua)) {
+    howto.textContent = "Androidの場合：印刷の画面が開いたら、いちばん上のプリンターの選択を「PDF形式で保存」にして、PDFのボタンを押してください。";
+  }
+
   fillSelect($("b-year"), 2026, 1900, "----");
   fillSelect($("b-month"), 1, 12, "--");
   refreshDays();
