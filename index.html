@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>律子塾 2026年 年末リセット（参加者特典版）</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<!-- 画面のデザイン：主催者版（organizer/hayami.html）と同じもの。tools/build-participant.py で自動で写しています -->
+<style>
+  :root {
+    --bg: #fbfaf8;
+    --card: #ffffff;
+    --text: #3d3a42;
+    --muted: #6f6a75;
+    --lavender: #b9aebd;
+    --lavender-soft: #efebf0;
+    --lavender-deep: #7d7084;
+    --mint: #a9d8c6;
+    --mint-soft: #e7f4ee;
+    --mint-deep: #4f8f78;
+    --blue: #b7d3e6;
+    --blue-soft: #eaf3f9;
+    --blue-deep: #3f6b86;
+    --warm-soft: #fbf5ee;
+    --line: #e6e1e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 5% 0%, var(--blue-soft) 0, transparent 35%),
+      radial-gradient(circle at 95% 100%, var(--mint-soft) 0, transparent 40%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    font-size: 22px;
+    line-height: 1.8;
+    letter-spacing: 0.03em;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 48px; }
+
+  /* 入力バー（律子さんの操作用） */
+  .bar {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 18px;
+  }
+  .bar-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .bar input[type="text"], .bar select {
+    font: inherit; color: var(--text);
+    border: 2px solid var(--line); border-radius: 12px;
+    padding: 8px 12px; background: #fdfcfd;
+  }
+  .bar input:focus, .bar select:focus { outline: none; border-color: var(--lavender); }
+  .bar input#name { width: 10em; }
+  .btn {
+    font: inherit; font-weight: 700; cursor: pointer;
+    border: none; border-radius: 999px; padding: 10px 24px;
+  }
+  .btn-primary { background: var(--mint-deep); color: #fff; }
+  .btn-quiet { background: var(--lavender-soft); color: var(--lavender-deep); font-weight: 400; padding: 8px 18px; }
+  .bar .error { color: #a0525e; margin: 6px 0 0; }
+  .bar .error:empty { display: none; }
+  .bar.closed .bar-row.inputs, .bar.closed .error { display: none; }
+  .bar .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .bar.open .toggle-row { margin-top: 10px; }
+  .people { display: flex; flex-wrap: wrap; gap: 8px; }
+  .people button {
+    font: inherit; font-size: 17px; cursor: pointer;
+    border: 1px solid var(--line); background: #fff; color: var(--text);
+    border-radius: 999px; padding: 4px 16px;
+  }
+  .people button.now { background: var(--mint-soft); border-color: var(--mint); font-weight: 700; }
+  .people .label { color: var(--muted); font-size: 15px; align-self: center; }
+
+  .empty-state { text-align: center; color: var(--muted); padding: 80px 20px; }
+  .empty-state h1 { font-size: 38px; color: var(--text); margin: 0 0 8px; line-height: 1.5; }
+  .empty-state .sub { font-size: 24px; margin: 0 0 32px; }
+  .empty-state .how { font-size: 18px; }
+
+  .result { display: none; }
+  .result.show { display: block; animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 26px 30px;
+    box-shadow: 0 6px 24px rgba(125, 112, 132, 0.08);
+  }
+  .panel > * + * { margin-top: 18px; }
+
+  /* 人の見出し（干支の画像） */
+  .person { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+  .eto {
+    width: 230px; height: 230px; border-radius: 28px; overflow: hidden;
+    background: var(--lavender-soft);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .eto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .eto .eto-kanji { font-size: 92px; font-weight: 700; color: var(--lavender-deep); display: none; }
+  .eto.noimg img { display: none; }
+  .eto.noimg .eto-kanji { display: block; }
+  .person .name { font-size: 36px; font-weight: 700; margin: 0; line-height: 1.4; }
+  .person .born { font-size: 22px; color: var(--muted); margin: 4px 0 0; }
+  .person .kanshi-line { font-size: 26px; font-weight: 700; color: var(--lavender-deep); margin: 6px 0 0; }
+
+  /* 画面の切り替え */
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 22px 0 18px; }
+  .tabs button {
+    font: inherit; font-size: 22px; font-weight: 700; cursor: pointer;
+    border: 3px solid var(--line); background: #fff; color: var(--muted);
+    border-radius: 18px; padding: 12px 14px; line-height: 1.5;
+  }
+  .tabs button.now { color: #fff; }
+  .tabs button.t-self.now { background: var(--blue-deep); border-color: var(--blue-deep); }
+  .tabs button.t-2026.now { background: var(--lavender-deep); border-color: var(--lavender-deep); }
+  .tabs button.t-2027.now { background: var(--mint-deep); border-color: var(--mint-deep); }
+  .panel { display: none; }
+  .panel.show { display: block; animation: fade .3s ease; }
+
+  .sec-title {
+    font-size: 18px; font-weight: 700; color: var(--lavender-deep);
+    letter-spacing: 0.1em; margin: 0 0 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sec-title::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--mint); flex: none; }
+  .card.tint-blue { background: var(--blue-soft); border-color: #d5e6f1; }
+  .card.tint-mint { background: var(--mint-soft); border-color: #d3eadf; }
+  .card.tint-lav  { background: var(--lavender-soft); border-color: #e2dce4; }
+  .card.tint-warm { background: var(--warm-soft); border-color: #f3e6d8; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+  .big { font-size: 32px; font-weight: 700; margin: 0; line-height: 1.5; }
+  .big .yomi { font-size: 20px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .badge {
+    display: inline-block; font-size: 22px; font-weight: 700;
+    background: #fff; border: 2px solid var(--lavender); color: var(--lavender-deep);
+    border-radius: 999px; padding: 2px 18px; margin: 8px 8px 0 0;
+  }
+  .body { margin: 0; white-space: pre-wrap; }
+  .small { font-size: 17px; color: var(--muted); margin: 8px 0 0; }
+  .small:empty { display: none; }
+
+  .py { display: grid; grid-template-columns: auto 1fr; gap: 30px; align-items: center; }
+  .py-badge {
+    width: 170px; height: 170px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #fff; border: 4px solid var(--lavender);
+  }
+  .py-badge small { font-size: 16px; letter-spacing: 0.1em; line-height: 1.4; color: var(--lavender-deep); }
+  .py-badge strong { font-size: 86px; line-height: 1; font-family: Georgia, "Times New Roman", serif; color: var(--lavender-deep); }
+  .c-mint .py-badge { border-color: var(--mint); background: linear-gradient(145deg, var(--mint-soft), var(--blue-soft)); }
+  .c-mint .py-badge small, .c-mint .py-badge strong { color: var(--mint-deep); }
+  .c-blue .py-badge { border-color: var(--blue); background: var(--blue-soft); }
+  .c-blue .py-badge small, .c-blue .py-badge strong { color: var(--blue-deep); }
+  .theme { font-size: 36px; font-weight: 700; line-height: 1.45; margin: 0 0 10px; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+  .tags li {
+    background: #fff; color: var(--blue-deep); border: 1px solid #cfe1ee;
+    border-radius: 14px; padding: 6px 18px; font-weight: 700; font-size: 22px;
+  }
+
+  /* 9年サイクル */
+  .cycle { display: grid; grid-template-columns: repeat(9, minmax(0, 76px)); gap: 12px; margin: 10px 0 16px; }
+  .cycle span {
+    aspect-ratio: 1; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 700;
+    background: #fff; border: 2px solid var(--line); color: var(--muted);
+  }
+  .cycle span.past { background: var(--lavender-soft); }
+  .cycle span.now { background: var(--lavender-deep); border-color: var(--lavender-deep); color: #fff; transform: scale(1.12); }
+
+  /* 月のテーマ */
+  .month { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
+  .month-num {
+    width: 110px; height: 110px; border-radius: 24px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #fff; border: 3px solid var(--lavender);
+  }
+  .month-num small { font-size: 16px; color: var(--muted); line-height: 1.3; }
+  .month-num strong { font-size: 50px; line-height: 1.1; font-family: Georgia, "Times New Roman", serif; }
+  .month .title { font-size: 28px; font-weight: 700; margin: 0; }
+
+  /* 12か月 */
+  .months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .months div {
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    padding: 10px 8px; text-align: center; line-height: 1.4;
+  }
+  .months .m { font-size: 16px; color: var(--muted); margin: 0; }
+  .months .n { font-size: 32px; font-weight: 700; margin: 2px 0; font-family: Georgia, "Times New Roman", serif; color: var(--mint-deep); }
+  .months .t { font-size: 15px; font-weight: 700; margin: 0; }
+
+  /* 月別ガイド（Sophia Labo オリジナル） */
+  .guide-card { background: linear-gradient(160deg, var(--lavender-soft), var(--warm-soft)); border-color: #e2dce4; }
+  .guide-brand { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 0.12em; color: var(--lavender-deep); }
+  .guide-head { margin: 2px 0 10px; font-size: 30px; font-weight: 700; line-height: 1.4; }
+  .guide-intro { margin: 0 0 18px; font-size: 17px; color: var(--muted); }
+  .guide { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .guide-item { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; }
+  .guide-top { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .guide-num {
+    flex: none; width: 54px; height: 54px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--mint-soft); border: 2px solid var(--mint); color: var(--mint-deep);
+    font-size: 28px; font-weight: 700; font-family: Georgia, "Times New Roman", serif;
+  }
+  .guide-months { margin: 0; font-size: 16px; font-weight: 700; color: var(--mint-deep); }
+  .guide-title { margin: 0; font-size: 24px; font-weight: 700; line-height: 1.35; }
+  .guide-lead { margin: 0 0 4px; font-weight: 700; }
+  .guide-body { margin: 0; }
+  .guide-q { margin: 10px 0 0; padding: 8px 14px; border-radius: 12px; background: var(--blue-soft); color: var(--blue-deep); }
+  .guide-q b { margin-right: 6px; }
+
+  /* パーソナルイヤーの流れ */
+  .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 10px; align-items: stretch; }
+  .flow .step {
+    border-radius: 18px; padding: 14px 16px; text-align: center;
+    background: #fff; border: 2px solid var(--line);
+  }
+  .flow .step.now26 { border-color: var(--lavender); background: var(--lavender-soft); }
+  .flow .step.now27 { border-color: var(--mint); background: var(--mint-soft); }
+  .flow .yr { font-size: 17px; color: var(--muted); margin: 0; }
+  .flow .num { font-size: 44px; font-weight: 700; line-height: 1.2; margin: 0; font-family: Georgia, "Times New Roman", serif; }
+  .flow .th { font-size: 18px; font-weight: 700; margin: 0; line-height: 1.5; }
+  .flow .arrow { align-self: center; font-size: 30px; color: var(--lavender); }
+
+  /* PDF */
+  .print-only { display: none; }
+  .pdf-row { margin-top: 28px; text-align: center; }
+  .pdf-row .btn { font-size: 22px; padding: 16px 40px; }
+  .pdf-row p { font-size: 16px; color: var(--muted); margin: 8px 0 0; }
+
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; animation: none !important; }
+    body { background: #fff; font-size: 11pt; line-height: 1.7; }
+    main { max-width: none; padding: 0; }
+    .bar, .tabs, .no-print, .empty-state { display: none !important; }
+    .result { display: block !important; }
+    .panel { display: block !important; }
+    .panel + .panel { break-before: page; }
+    .panel > * + * { margin-top: 8px; }
+    .print-only { display: block; }
+    #cycle-text { font-size: 14pt !important; }
+    .print-head {
+      font-size: 16pt; font-weight: 700; margin: 10px 0 8px;
+      padding-bottom: 4px; border-bottom: 2px solid var(--lavender);
+    }
+    .panel + .panel .print-head { margin-top: 0; }
+    .card { box-shadow: none; padding: 12px 16px; border-radius: 14px; break-inside: avoid; }
+    .person { gap: 16px; }
+    .eto { width: 100px; height: 100px; border-radius: 16px; }
+    .person .name { font-size: 18pt; }
+    .person .born { font-size: 11pt; }
+    .person .kanshi-line { font-size: 13pt; }
+    .sec-title { font-size: 9.5pt; margin-bottom: 4px; }
+    .theme { font-size: 16pt; margin-bottom: 4px; }
+    .big { font-size: 14pt; }
+    .big .yomi { font-size: 10pt; }
+    .badge { font-size: 10pt; padding: 0 10px; margin-top: 4px; }
+    .small { font-size: 8.5pt; margin-top: 4px; }
+    .py { gap: 16px; }
+    .py-badge { width: 84px; height: 84px; border-width: 3px; }
+    .py-badge small { font-size: 7.5pt; }
+    .py-badge strong { font-size: 36pt; }
+    .tags { margin-top: 6px; gap: 6px; }
+    .tags li { font-size: 10pt; padding: 2px 10px; border-radius: 10px; }
+    .grid { gap: 8px; }
+    .cycle { grid-template-columns: repeat(9, 34px); gap: 6px; margin: 4px 0 6px; }
+    .cycle span { font-size: 11pt; }
+    .cycle span.now { transform: none; }
+    .month { gap: 12px; }
+    .month-num { width: 60px; height: 60px; border-radius: 12px; }
+    .month-num small { font-size: 8pt; }
+    .month-num strong { font-size: 22pt; }
+    .month .title { font-size: 13pt; }
+    .months { gap: 6px; }
+    .months div { padding: 4px; border-radius: 10px; }
+    .months .m { font-size: 8pt; }
+    .months .n { font-size: 15pt; margin: 0; }
+    .months .t { font-size: 7.5pt; }
+    .flow .step { padding: 6px 8px; border-radius: 12px; }
+    .flow .yr { font-size: 8.5pt; }
+    .flow .num { font-size: 20pt; }
+    .flow .th { font-size: 9pt; }
+    .flow .arrow { font-size: 14pt; }
+    .guide-card { break-before: page; break-inside: auto; padding: 10px 14px; }
+    .guide-brand { font-size: 9pt; }
+    .guide-head { font-size: 15pt; margin: 0 0 2px; }
+    .guide-intro { font-size: 8pt; line-height: 1.55; margin-bottom: 6px; }
+    .guide { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .guide-item { padding: 6px 10px; border-radius: 12px; break-inside: avoid; }
+    .guide-top { gap: 8px; margin-bottom: 4px; }
+    .guide-num { width: 30px; height: 30px; font-size: 14pt; border-width: 1.5px; }
+    .guide-top > div { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; }
+    .guide-months { font-size: 8.5pt; order: 2; white-space: nowrap; }
+    .guide-title { font-size: 12pt; order: 1; white-space: nowrap; }
+    .guide-lead, .guide-body { font-size: 9.5pt; line-height: 1.45; letter-spacing: 0; }
+    .guide-q { font-size: 9.5pt; line-height: 1.45; letter-spacing: 0; margin-top: 4px; padding: 3px 8px; border-radius: 8px; }
+    .guide-q b { display: block; font-size: 8.5pt; }
+  }
+
+  @media screen and (max-width: 960px) {
+    body { font-size: 19px; }
+    .grid { grid-template-columns: 1fr; }
+    .person, .py { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .eto { width: 160px; height: 160px; }
+    .tabs { grid-template-columns: 1fr; }
+    .theme { font-size: 28px; }
+    .big { font-size: 26px; }
+    .py-badge { width: 130px; height: 130px; }
+    .py-badge strong { font-size: 64px; }
+    .flow { grid-template-columns: 1fr; }
+    .flow .arrow { transform: rotate(90deg); justify-self: center; }
+    .months { grid-template-columns: repeat(3, 1fr); }
+    .guide { grid-template-columns: 1fr; }
+    .guide-head { font-size: 24px; }
+    .cycle span { font-size: 16px; }
+    .card { padding: 22px 20px; }
+    main { padding: 16px 16px 40px; }
+  }
+</style>
+<style>
+  /* 参加者特典版だけの部分（コードと生年月日の入力） */
+  .gate { max-width: 760px; margin: 0 auto; }
+  .gate h1 { font-size: 30px; line-height: 1.5; margin: 0; }
+  .gate .lead { color: var(--muted); font-size: 18px; margin: 4px 0 20px; }
+  .gate .step { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 16px; }
+  .gate .step-title { font-weight: 700; margin: 0 0 8px; }
+  .gate .note { font-size: 16px; color: var(--muted); margin: 6px 0 0; }
+  .gate .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .gate input[type="text"], .gate select {
+    font: inherit; color: var(--text);
+    border: 2px solid var(--line); border-radius: 12px;
+    padding: 8px 12px; background: #fdfcfd;
+  }
+  .gate input:focus, .gate select:focus { outline: none; border-color: var(--lavender); }
+  .gate input#code { width: 11em; letter-spacing: 0.08em; text-transform: uppercase; }
+  .gate input#name { width: 10em; }
+  .gate .btn[disabled] { opacity: 0.5; cursor: wait; }
+  .gate .status { margin: 10px 0 0; font-weight: 700; color: var(--mint-deep); }
+  .gate .status.ng { color: #a0525e; }
+  .gate .status:empty { display: none; }
+  .gate .error { color: #a0525e; margin: 10px 0 0; font-weight: 700; }
+  .gate .error:empty { display: none; }
+  .gate .notice {
+    background: var(--warm-soft); border: 1px solid #f3e6d8; border-radius: 14px;
+    padding: 12px 16px; margin-top: 16px;
+  }
+  .gate .notice p { margin: 0 0 8px; }
+  .history { display: flex; flex-wrap: wrap; gap: 8px; }
+  .history .item { display: inline-flex; align-items: center; border: 1px solid var(--line); background: #fff; border-radius: 999px; overflow: hidden; }
+  .history .item button { font: inherit; font-size: 17px; cursor: pointer; border: none; background: none; color: var(--text); padding: 4px 6px 4px 16px; }
+  .history .item button.del { color: var(--muted); padding: 4px 12px 4px 6px; }
+  .backbar { margin-bottom: 14px; }
+  [hidden] { display: none !important; }
+  @media screen and (max-width: 960px) {
+    .gate h1 { font-size: 24px; }
+    .gate .row > * { flex: none; }
+    .gate #btn-fortune { width: 100%; padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- コードと生年月日の入力 -->
+  <div class="card gate no-print" id="gate">
+    <h1>律子塾 2026年 年末リセット</h1>
+    <p class="lead">体験会の参加者特典版です。ご家族やお友達の分も見られます。</p>
+
+    <div id="pending" class="notice" hidden>
+      <p>前回、結果を受け取る前に通信が途切れたようです。下のボタンで、その結果を受け取れます。<br>（回数が二重に減ることはありません）</p>
+      <div class="row">
+        <button class="btn btn-primary" id="btn-retry" type="button">結果を受け取る</button>
+        <button class="btn btn-quiet" id="btn-drop" type="button">やめる</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <p class="step-title">① アクセスコード</p>
+      <div class="row">
+        <input type="text" id="code" placeholder="NR-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="アクセスコード">
+        <button class="btn btn-primary" id="btn-check" type="button">確認する</button>
+      </div>
+      <p class="status" id="code-status" role="status"></p>
+    </div>
+
+    <div class="step" id="step-birth" hidden>
+      <p class="step-title">② 見たい人のお名前と生年月日</p>
+      <div class="row">
+        <input type="text" id="name" placeholder="お名前（なくても可）" autocomplete="off" aria-label="お名前">
+      </div>
+      <div class="row" style="margin-top:10px">
+        <select id="b-year" aria-label="生まれた年"></select><span>年</span>
+        <select id="b-month" aria-label="生まれた月"></select><span>月</span>
+        <select id="b-day" aria-label="生まれた日"></select><span>日</span>
+      </div>
+      <p class="note">お名前は、この画面とPDFに表示するだけで、どこにも送りません。</p>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-primary" id="btn-fortune" type="button">結果を見る（1回分を使います）</button>
+      </div>
+    </div>
+
+    <p class="error" id="error" role="alert"></p>
+
+    <div class="step" id="step-history" hidden>
+      <p class="step-title">この端末で見た結果（回数は減りません）</p>
+      <div class="history" id="history"></div>
+      <p class="note">結果はこの端末の中にだけ保存しています。「×」で消せます。</p>
+    </div>
+  </div>
+
+  <div class="backbar no-print" id="backbar" hidden>
+    <button class="btn btn-quiet" id="btn-back" type="button">← 入力画面にもどる</button>
+  </div>
+
+  <!-- 結果の画面：主催者版と同じもの（自動で写しています） -->
+  <div class="result" id="result">
+
+    <!-- その人の見出し -->
+    <div class="card person">
+      <div class="eto" id="eto">
+        <img id="eto-img" alt="">
+        <span class="eto-kanji" id="eto-kanji"></span>
+      </div>
+      <div>
+        <p class="name" id="p-name"></p>
+        <p class="born" id="p-born"></p>
+        <p class="kanshi-line" id="p-kanshi"></p>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="t-self" data-tab="self" type="button">あなたの本質</button>
+      <button class="t-2026" data-tab="2026" type="button">2026年は<br>どんな年だった？</button>
+      <button class="t-2027" data-tab="2027" type="button">2027年の傾向</button>
+    </div>
+
+    <!-- あなたの本質 -->
+    <div class="panel" id="panel-self">
+      <p class="print-only print-head"><span class="js-print-name"></span>あなたの本質</p>
+      <div class="card c-blue">
+        <p class="sec-title">ライフパスナンバー（生まれ持った本質）</p>
+        <div class="py">
+          <div class="py-badge"><small>ライフパス</small><strong id="lp-num"></strong></div>
+          <div>
+            <p class="theme" id="lp-title"></p>
+            <p class="body" id="lp-desc"></p>
+            <p class="small" id="lp-calc"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card tint-lav">
+        <p class="sec-title">干支から見た気質</p>
+        <p class="big" id="k-name"></p>
+        <p class="body" id="k-desc"></p>
+      </div>
+
+      <div class="grid">
+        <div class="card tint-mint">
+          <p class="sec-title">九星</p>
+          <p class="big" id="ky-name"></p>
+          <p class="body" id="ky-desc"></p>
+          <p class="small" id="ky-note"></p>
+        </div>
+        <div class="card tint-blue">
+          <p class="sec-title">星座</p>
+          <p class="big" id="sz-name"></p>
+          <p class="body" id="sz-desc"></p>
+          <p class="small" id="sz-note"></p>
+        </div>
+      </div>
+      <p class="small">※ どれも生年月日から見た「生まれ持った傾向」です。その年の運勢を示すものではありません。</p>
+    </div>
+
+    <!-- 2026年 -->
+    <div class="panel" id="panel-2026">
+      <p class="print-only print-head"><span class="js-print-name"></span>2026年はどんな年だった？</p>
+      <div class="card tint-warm">
+        <p class="sec-title">2026年のあなた</p>
+        <p class="big" id="a26-age"></p>
+        <div id="a26-badges"></div>
+        <p class="body" id="a26-note" style="margin-top:10px"></p>
+      </div>
+
+      <div class="card">
+        <p class="sec-title">2026年のパーソナルイヤー</p>
+        <div class="py">
+          <div class="py-badge"><small>2026年</small><strong id="py26-num"></strong></div>
+          <div>
+            <p class="theme" id="py26-theme"></p>
+            <p class="body" id="py26-desc"></p>
+            <ul class="tags" id="py26-keys"></ul>
+            <p class="small" id="py26-calc"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="sec-title">9年サイクルの中の2026年</p>
+        <div class="cycle" id="cycle"></div>
+        <p class="big" id="cycle-text" style="font-size:26px"></p>
+        <p class="body" id="cycle-phase"></p>
+        <p class="small">パーソナルイヤーは1から9までを順にめぐり、9年でひと回りします。</p>
+      </div>
+
+      <div class="card tint-lav">
+        <p class="sec-title">2026年12月のテーマ（年末の過ごし方）</p>
+        <div class="month">
+          <div class="month-num"><small>12月</small><strong id="m12-num"></strong></div>
+          <div>
+            <p class="title" id="m12-title"></p>
+            <p class="body" id="m12-desc"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2027年 -->
+    <div class="panel c-mint" id="panel-2027">
+      <p class="print-only print-head"><span class="js-print-name"></span>2027年の傾向</p>
+      <div class="card">
+        <p class="sec-title">パーソナルイヤーの流れ</p>
+        <div class="flow" id="flow"></div>
+      </div>
+
+      <div class="card tint-warm">
+        <p class="sec-title">2027年のあなた</p>
+        <p class="big" id="a27-age"></p>
+        <div id="a27-badges"></div>
+      </div>
+
+      <div class="card">
+        <p class="sec-title">2027年のパーソナルイヤー</p>
+        <div class="py">
+          <div class="py-badge"><small>2027年</small><strong id="py27-num"></strong></div>
+          <div>
+            <p class="theme" id="py27-theme"></p>
+            <p class="body" id="py27-desc"></p>
+            <p class="small" id="py27-calc"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card tint-blue">
+          <p class="sec-title">2027年に意識したいこと</p>
+          <ul class="tags" id="py27-focus"></ul>
+        </div>
+        <div class="card tint-mint">
+          <p class="sec-title">年末までに整えておきたいこと</p>
+          <p class="body" id="py27-prepare"></p>
+        </div>
+      </div>
+
+      <div class="card tint-mint">
+        <p class="sec-title">2027年1月のテーマ（新年のスタート）</p>
+        <div class="month">
+          <div class="month-num" style="border-color:var(--mint)"><small>1月</small><strong id="m1-num"></strong></div>
+          <div>
+            <p class="title" id="m1-title"></p>
+            <p class="body" id="m1-desc"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="sec-title">2027年の12か月の流れ</p>
+        <div class="months" id="months"></div>
+      </div>
+
+      <div class="card guide-card" id="guide-card">
+        <p class="guide-brand">Sophia Labo オリジナル</p>
+        <p class="guide-head">2027年 私の12か月ガイド</p>
+        <p class="guide-intro">このガイドは、数秘術の数字1〜9の基本テーマをもとに、Sophia Labo独自の視点を加えて制作したオリジナルコンテンツです。<br>未来を決めつけるものではなく、毎月のテーマをヒントに、自分自身を見つめ、望む未来へ向けた一歩を選ぶためのガイドとしてお楽しみください。</p>
+        <div class="guide" id="guide"></div>
+      </div>
+    </div>
+
+    <div class="pdf-row no-print">
+      <button class="btn btn-primary" id="btn-pdf" type="button">3つの画面をまとめてPDFにする</button>
+      <p>印刷の画面が開いたら、送信先（プリンター）で「PDFとして保存」を選んでください。</p>
+    </div>
+
+  </div>
+</main>
+
+<script src="result-view.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
