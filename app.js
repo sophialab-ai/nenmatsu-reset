@@ -260,6 +260,7 @@
 
   function showResult(entry) {
     current = entry;
+    resetPdfUi();
     window.RESULT_VIEW.render(entry.result, entry.name);
     $("gate").hidden = true;
     $("backbar").hidden = false;
@@ -321,24 +322,186 @@
     tabButtons[i].addEventListener("click", function () { showTab(this.getAttribute("data-tab")); });
   }
 
-  // PDFの保存名が「年末リセット_名前」になるよう、印刷中だけタイトルを変える
-  $("btn-pdf").addEventListener("click", function () {
-    var original = document.title;
-    var b = current.birth;
-    document.title = "律子塾 年末リセット_" + (current.name || (b.year + "年" + b.month + "月" + b.day + "日生まれ"));
-    window.print();
-    document.title = original;
-  });
+  /* ---------- PDFを保存する ----------
+     スマホの印刷はページの数え方が機種ごとにちがい、最後が切れることがあるので、印刷は使わない。
+     主催者版の印刷用デザインのまま4枚の画像に写し取り（html2canvas）、A4のPDFにまとめる（jsPDF）。
+     PDFは端末の中で作り、どこにも送らない。部品は「PDFを保存する」を押したときだけ読み込む。 */
 
-  // PDFの保存のしかたは、スマホでは操作がちがうので、案内の文を差し替える
   var ua = navigator.userAgent || "";
   var isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-  var howto = document.querySelector(".pdf-row p");
-  if (howto && isIOS) {
-    howto.textContent = "iPhone・iPadの場合：印刷の画面が開いたら、上の共有ボタン（四角に↑のマーク）を押し、「“ファイル”に保存」を選ぶとPDFとして保存できます。";
-  } else if (howto && /Android/.test(ua)) {
-    howto.textContent = "Androidの場合：印刷の画面が開いたら、いちばん上のプリンターの選択を「PDF形式で保存」にして、PDFのボタンを押してください。";
+  var PAGE_W = 210, PAGE_H = 297, MARGIN = 12;   // A4（mm）
+  var SHEET_PX = 703;                             // 印刷したときの中身の幅（186mm）
+
+  var pdfRow = document.querySelector(".pdf-row");
+  var pdfNote = pdfRow.querySelector("p");
+  var pdfStatus = document.createElement("p");
+  pdfStatus.className = "pdf-status";
+  pdfStatus.setAttribute("role", "status");
+  var btnShare = document.createElement("button");
+  btnShare.type = "button";
+  btnShare.className = "btn btn-primary";
+  btnShare.hidden = true;
+  btnShare.textContent = "PDFを保存・送る";
+  pdfRow.appendChild(pdfStatus);
+  pdfRow.appendChild(btnShare);
+  $("btn-pdf").textContent = "PDFを保存する";
+  pdfNote.textContent = isIOS
+    ? "押すと、4ページのPDFができます（10秒ほどかかります）。できあがったら「PDFを保存・送る」を押し、「“ファイル”に保存」を選ぶと保存できます。LINEやメールで送ることもできます。"
+    : "押すと、4ページのPDFができて、「ダウンロード」に保存されます（10秒ほどかかります）。";
+
+  var pdfLibs = null;
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
   }
+  function loadPdfLibs() {
+    if (!pdfLibs) {
+      pdfLibs = loadScript("vendor/html2canvas.min.js")
+        .then(function () { return loadScript("vendor/jspdf.umd.min.js"); })
+        .catch(function (e) { pdfLibs = null; throw e; });
+    }
+    return pdfLibs;
+  }
+
+  // 見えない枠（iframe）の中に、印刷用のデザインで4ページ分を並べる。
+  // 枠の幅を広くとるので、スマホ用のデザインではなく印刷用のデザインになる。
+  function buildSheets() {
+    var frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1000px;height:1500px;border:0;";
+    document.body.appendChild(frame);
+    var css = Array.prototype.map.call(document.querySelectorAll("style"), function (s) { return s.textContent; }).join("\n")
+      .replace(/@media print/g, "@media all")
+      .replace(/@media screen and \(max-width: 960px\)/g, "@media not all");
+    var doc = frame.contentDocument;
+    doc.open();
+    doc.write('<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>' + css +
+      " body{margin:0;} .sheet{width:" + SHEET_PX + "px;background:#fff;margin:0 0 40px;}" +
+      // ガイドは格子（grid）で並べる（画像に写す部品は、印刷用の横並びをうまく写せないため）
+      " .guide{display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px;}" +
+      " .guide-item{display:block!important;width:auto!important;margin:0!important;}" +
+      "</style></head><body></body></html>");
+    doc.close();
+
+    var guide = $("guide-card");
+    var pages = [
+      [document.querySelector(".card.person"), $("panel-self")],
+      [$("panel-2026")],
+      [$("panel-2027")],
+      [guide]
+    ];
+    var sheets = pages.map(function (nodes) {
+      var sheet = doc.createElement("div");
+      sheet.className = "sheet";
+      nodes.forEach(function (n) {
+        var c = doc.importNode(n, true);
+        var g = c.querySelector && c.querySelector("#guide-card");
+        if (g) g.parentNode.removeChild(g); // ガイドは4ページ目にだけ
+        sheet.appendChild(c);
+      });
+      doc.body.appendChild(sheet);
+      return sheet;
+    });
+    var imgs = Array.prototype.slice.call(doc.images);
+    imgs.forEach(function (img) { img.src = img.src; });
+    return Promise.all(imgs.map(function (img) {
+      return img.complete ? null : new Promise(function (r) { img.onload = img.onerror = r; });
+    })).then(function () { return { frame: frame, sheets: sheets }; });
+  }
+
+  function makePdf() {
+    return loadPdfLibs().then(buildSheets).then(function (built) {
+      var pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", compress: true });
+      var chain = Promise.resolve();
+      built.sheets.forEach(function (sheet, i) {
+        chain = chain.then(function () {
+          return window.html2canvas(sheet, { scale: 2, backgroundColor: "#ffffff", logging: false, windowWidth: 1000 });
+        }).then(function (canvas) {
+          if (i) pdf.addPage();
+          var w = PAGE_W - MARGIN * 2, h = canvas.height * w / canvas.width;
+          var maxH = PAGE_H - MARGIN * 2;
+          if (h > maxH) { w = w * maxH / h; h = maxH; } // 1ページに収める
+          pdf.addImage(canvas.toDataURL("image/jpeg", 0.9), "JPEG", (PAGE_W - w) / 2, MARGIN, w, h);
+        });
+      });
+      return chain.then(function () {
+        built.frame.parentNode.removeChild(built.frame);
+        return pdf.output("blob");
+      }, function (e) {
+        built.frame.parentNode.removeChild(built.frame);
+        throw e;
+      });
+    });
+  }
+
+  function pdfFileName() {
+    var b = current.birth;
+    var who = current.name || (b.year + "年" + b.month + "月" + b.day + "日生まれ");
+    return ("律子塾 年末リセット_" + who).replace(/[\\\/:*?"<>|]/g, "") + ".pdf";
+  }
+
+  function download(blob, name) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  }
+
+  var readyFile = null;
+  function resetPdfUi() {
+    readyFile = null;
+    btnShare.hidden = true;
+    pdfStatus.textContent = "";
+    $("btn-pdf").disabled = false;
+    $("btn-pdf").hidden = false;
+    pdfNote.hidden = false;
+  }
+  $("btn-pdf").addEventListener("click", function () {
+    var btn = $("btn-pdf");
+    btn.disabled = true;
+    btnShare.hidden = true;
+    pdfStatus.textContent = "PDFを作っています…（10秒ほどお待ちください）";
+    var name = pdfFileName();
+    makePdf().then(function (blob) {
+      btn.disabled = false;
+      var file = null;
+      try { file = new File([blob], name, { type: "application/pdf" }); } catch (e) { file = null; }
+      if (isIOS && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        // iPhoneは「共有」から保存する（ボタンをもう一度押してもらう必要がある）
+        readyFile = file;
+        // 迷わないよう、次に押すボタンだけを出す
+        btn.hidden = true;
+        pdfNote.hidden = true;
+        btnShare.hidden = false;
+        pdfStatus.textContent = "PDFができました。下の「PDFを保存・送る」を押して、出てきた画面で「“ファイル”に保存」を選んでください。";
+      } else {
+        download(blob, name);
+        pdfStatus.textContent = "PDFを保存しました（「ダウンロード」に入っています）。";
+      }
+    }, function () {
+      btn.disabled = false;
+      pdfStatus.textContent = "PDFを作れませんでした。電波のよいところで、もう一度押してください。";
+    });
+  });
+  btnShare.addEventListener("click", function () {
+    if (!readyFile) return;
+    navigator.share({ files: [readyFile], title: readyFile.name }).then(function () {
+      pdfStatus.textContent = "PDFを保存・送信しました。";
+    }, function (e) {
+      if (e && e.name === "AbortError") return; // 自分で閉じたときは、そのまま
+      download(readyFile, readyFile.name);
+    });
+  });
 
   fillSelect($("b-year"), 2026, 1900, "----");
   fillSelect($("b-month"), 1, 12, "--");

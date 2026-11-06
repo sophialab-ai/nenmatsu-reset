@@ -6,7 +6,7 @@
 <title>律子塾 2026年 年末リセット（参加者特典版）</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
 <!-- 画面のデザイン：主催者版（organizer/hayami.html）と同じもの。tools/build-participant.py で自動で写しています -->
 <style>
   :root {
@@ -370,6 +370,10 @@
   .history .item button { font: inherit; font-size: 17px; cursor: pointer; border: none; background: none; color: var(--text); padding: 4px 6px 4px 16px; }
   .history .item button.del { color: var(--muted); padding: 4px 12px 4px 6px; }
   .backbar { margin-bottom: 14px; }
+  .pdf-row .pdf-status { font-weight: 700; color: var(--mint-deep); }
+  .pdf-row .pdf-status:empty { display: none; }
+  .pdf-row #btn-pdf[disabled] { opacity: 0.5; cursor: wait; }
+  .pdf-row .btn + .btn, .pdf-row .pdf-status + .btn { margin-top: 10px; }
   [hidden] { display: none !important; }
   @media screen and (max-width: 960px) {
     .gate h1 { font-size: 24px; }
